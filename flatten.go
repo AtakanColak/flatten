@@ -19,6 +19,8 @@ type SeparatorStyle struct {
 	Before string // Prepend to key
 	Middle string // Add between keys
 	After  string // Append to key
+
+	SkipArrays bool // Don't flatten arrays
 }
 
 // Default styles
@@ -89,6 +91,10 @@ func flatten(top bool, flatMap map[string]interface{}, nested interface{}, prefi
 	assign := func(newKey string, v interface{}) error {
 		switch v.(type) {
 		case map[string]interface{}, []interface{}:
+			if _, isArray := v.([]interface{}); style.SkipArrays && isArray {
+				flatMap[newKey] = v
+				return nil
+			}
 			if err := flatten(false, flatMap, v, newKey, style); err != nil {
 				return err
 			}
@@ -106,6 +112,11 @@ func flatten(top bool, flatMap map[string]interface{}, nested interface{}, prefi
 			assign(newKey, v)
 		}
 	case []interface{}:
+		if style.SkipArrays {
+			newKey := enkey(top, "", prefix, style)
+			assign(newKey, nested)
+			return nil
+		}
 		for i, v := range nested.([]interface{}) {
 			newKey := enkey(top, prefix, strconv.Itoa(i), style)
 			assign(newKey, v)
